@@ -56,55 +56,74 @@ run_forecast <- function(epi_data,
 
   if(!valid_run){
     message("Preparing for forecasting...")
-  }
+}
 
-  # trim to the needed env variables as dictated by the model
-  env_data <- pull_model_envvars(env_data = env_data,
-                                 quo_obsfield = quo_obsfield,
-                                 env_var = report_settings[["env_var"]])
-  #create alphabetical list of ONLY USED unique environmental variables
-  env_variables_used <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
+message("Trimming to the needed environmental variables...")
+# trim to the needed env variables as dictated by the model
+env_data <- pull_model_envvars(env_data = env_data,
+                               quo_obsfield = quo_obsfield,
+                               env_var = report_settings[["env_var"]])
+message("Trimming complete.")
 
-  # extract start & end dates for each variable for log file
-  env_dt_ranges <- dplyr::group_by(env_data, !!quo_obsfield) %>%
-    dplyr::summarize(start_dt = min(.data$obs_date), end_dt = max(.data$obs_date))
+message("Creating alphabetical list of unique environmental variables used...")
+#create alphabetical list of ONLY USED unique environmental variables
+env_variables_used <- dplyr::pull(env_data, !!quo_obsfield) %>% unique() %>% sort()
+message("List creation complete.")
 
-  # extend data into future, for future forecast portion
-  # also gap fills any missing data
-  env_data_extd <- extend_env_future(env_data,
-                                     quo_groupfield,
-                                     quo_obsfield,
-                                     quo_valuefield,
-                                     env_ref_data,
-                                     env_info,
-                                     fc_model_family, #reduced processing for naive models
-                                     #pull from report_settings
-                                     epi_date_type = report_settings[["epi_date_type"]],
-                                     #calculated/internal
-                                     valid_run,
-                                     groupings,
-                                     env_variables_used,
-                                     report_dates)
+message("Extracting start and end dates for each variable for log file...")
+# extract start & end dates for each variable for log file
+env_dt_ranges <- dplyr::group_by(env_data, !!quo_obsfield) %>%
+  dplyr::summarize(start_dt = min(.data$obs_date), end_dt = max(.data$obs_date))
+message("Extraction complete.")
 
-  #extend into future and/or gaps in requested report dates & known data
-  epi_data_extd <- extend_epi_future(epi_data,
-                                     quo_popfield,
-                                     quo_groupfield,
-                                     #calculated/internal
-                                     groupings,
-                                     report_dates)
+message("Extending data into future for future forecast portion and gap filling missing data...")
+# extend data into future, for future forecast portion
+# also gap fills any missing data
+env_data_extd <- extend_env_future(env_data,
+                                   quo_groupfield,
+                                   quo_obsfield,
+                                   quo_valuefield,
+                                   env_ref_data,
+                                   env_info,
+                                   fc_model_family, #reduced processing for naive models
+                                   #pull from report_settings
+                                   epi_date_type = report_settings[["epi_date_type"]],
+                                   #calculated/internal
+                                   valid_run,
+                                   groupings,
+                                   env_variables_used,
+                                   report_dates)
+message("Data extension and gap filling complete.")
 
-  # format the data for forecasting algorithm (base, more later)
-  env_fc <- env_format_fc(env_data_extd,
-                          quo_groupfield,
-                          quo_obsfield)
-  epi_fc <- epi_format_fc(epi_data_extd,
-                          quo_groupfield,
-                          fc_clusters = report_settings[["fc_clusters"]])
+message("Extending epidemiological data into future and/or gaps in requested report dates & known data...")
+#extend into future and/or gaps in requested report dates & known data
+epi_data_extd <- extend_epi_future(epi_data,
+                                   quo_popfield,
+                                   quo_groupfield,
+                                   #calculated/internal
+                                   groupings,
+                                   report_dates)
+message("Epidemiological data extension complete.")
 
-  # anomalizing the environ data, if requested.
-  # note: brittle on format from env_format_fc(), edit with caution
-  # AND not a naive model run
+message("Formatting the environmental data for forecasting algorithm...")
+# format the data for forecasting algorithm (base, more later)
+env_fc <- env_format_fc(env_data_extd,
+                        quo_groupfield,
+                        quo_obsfield)
+message("Environmental data formatting complete.")
+
+message("Formatting the epidemiological data for forecasting algorithm...")
+epi_fc <- epi_format_fc(epi_data_extd,
+                        quo_groupfield,
+                        fc_clusters = report_settings[["fc_clusters"]])
+message("Epidemiological data formatting complete.")
+
+message("Anomalizing the environmental data if requested...")
+# anomalizing the environ data, if requested.
+# note: brittle on format from env_format_fc(), edit with caution
+# AND not a naive model run
+message("Anomalization complete.")
+
 
   if (!naive){
     if (report_settings[["env_anomalies"]]){
