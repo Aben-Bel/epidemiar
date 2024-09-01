@@ -300,11 +300,17 @@ env_format_fc <- function(env_data_extd,
                           quo_obsfield){
   #turns long format into wide format - one entry per day per group
   #1: groupfield, 2: Date, 3: numericdate, 4+: env var (column name is env name)
+  print(head(env_data_extd))
+  summary(env_data_extd)
+  sum(is.na(env_data_extd[[rlang::as_name(quo_obsfield)]]))
+  str(env_data_extd[[rlang::as_name(quo_obsfield)]])
+
   env_spread <- env_data_extd %>%
     dplyr::mutate(numericdate = as.numeric(.data$obs_date)) %>%
     dplyr::select(!!quo_groupfield, !!quo_obsfield, .data$obs_date, .data$numericdate, .data$val_epidemiar) %>%
     tidyr::spread(key = !!quo_obsfield, value = .data$val_epidemiar)
 
+  print(head(env_spread))
   env_spread
 }
 
