@@ -470,7 +470,6 @@ input_check <- function(epi_data,
       lubridate::as.difftime((new_settings[["report_period"]] -
                                 new_settings[["fc_future_period"]]),
                              unit = "weeks")
-    print("report_start_date: ", report_start_date)
     cat("env_data summary before filtering in input_check:\n")
     print(summary(env_data))
     cat("env_data structure before filtering in input_check:\n")
