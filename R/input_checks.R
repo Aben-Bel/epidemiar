@@ -470,6 +470,11 @@ input_check <- function(epi_data,
       lubridate::as.difftime((new_settings[["report_period"]] -
                                 new_settings[["fc_future_period"]]),
                              unit = "weeks")
+    print("report_start_date: ", report_start_date)
+    cat("env_data summary before filtering in input_check:\n")
+    print(summary(env_data))
+    cat("env_data structure before filtering in input_check:\n")
+    str(env_data)
     pre_env_check <- env_data %>%
       #only pre-report data check
       dplyr::filter(.data$obs_date < report_start_date) %>%
@@ -480,8 +485,21 @@ input_check <- function(epi_data,
       #calc number of rows, should be the same for all if no missing rows
       dplyr::group_by(.data$group_obs) %>%
       dplyr::summarize(rowcount = dplyr::n())
+    
+    cat("pre_env_check summary:\n")
+    print(summary(pre_env_check))
+    cat("pre_env_check structure:\n")
+    str(pre_env_check)
+
     not_max_env_rows <- pre_env_check %>%
       dplyr::filter(.data$rowcount < max(pre_env_check$rowcount))
+
+
+    cat("not_max_env_rows summary:\n")
+    print(summary(not_max_env_rows))
+    cat("not_max_env_rows structure:\n")
+    str(not_max_env_rows)
+
     if (nrow(not_max_env_rows) > 1) {
       #some implicit missing rows
       err_flag <- TRUE
