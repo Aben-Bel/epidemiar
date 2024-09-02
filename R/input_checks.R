@@ -530,16 +530,6 @@ input_check <- function(epi_data,
     cat("Details of group_obs with lower rowcounts:\n")
     print(not_max_env_rows)
 
-    # If needed, examine the date ranges for these specific group_obs
-    problematic_groups <- not_max_env_rows$group_obs
-
-    for (group in problematic_groups) {
-      cat(paste("Dates for group_obs:", group, "\n"))
-      specific_group_data <- env_data %>%
-        dplyr::filter(paste0(!!quo_groupfield, "-", !!quo_obsfield) == group)
-      print(specific_group_data$obs_date)
-    }
-
     if (nrow(not_max_env_rows) > 1) {
       #some implicit missing rows
       err_flag <- TRUE
