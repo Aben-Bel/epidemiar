@@ -167,6 +167,47 @@ run_farrington <- function(epi_fc_data,
   }
 
 
+  # Loop through each group in epi_stss
+  for (i in 1:length(epi_stss)) {
+    
+    # Debugging: Print the current group number
+    message("Processing group: ", i)
+    
+    # Check the classes of all variables in the current group's data
+    variable_classes <- sapply(as.data.frame(epi_stss[[i]]), class)
+    message("Variable classes for group ", i, ":")
+    print(variable_classes)
+    
+    # Identify which variables are factors
+    factor_vars <- names(variable_classes[variable_classes == "factor"])
+    
+    if (length(factor_vars) > 0) {
+      # Debugging: Print the factor variables and their levels
+      message("Factor variables in group ", i, ":")
+      for (var in factor_vars) {
+        message(" - ", var, ": levels = ", paste(levels(epi_stss[[i]][[var]]), collapse = ", "))
+      }
+    } else {
+      message("No factor variables found in group ", i)
+    }
+
+    factor_vars <- names(variable_classes[variable_classes == "factor"])
+
+    for (var in factor_vars) {
+      levels_count <- length(levels(epi_stss[[i]][[var]]))
+      
+      if (levels_count < 2) {
+        # Debugging: Print warning for single-level factors
+        message("Warning: Factor variable '", var, "' in group ", i, " has less than 2 levels (", levels_count, " levels).")
+
+        # Convert to character or remove the factor variable
+        epi_stss[[i]][[var]] <- as.character(epi_stss[[i]][[var]])
+        message("Converted '", var, "' to character type.")
+      }
+    }
+  }
+
+
   #run Farringtons
   far_res_list <- vector('list', length(epi_stss))
 
