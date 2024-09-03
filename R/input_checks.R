@@ -470,27 +470,6 @@ input_check <- function(epi_data,
       lubridate::as.difftime((new_settings[["report_period"]] -
                                 new_settings[["fc_future_period"]]),
                              unit = "weeks")
-    cat("env_data summary before filtering in input_check:\n")
-    print(summary(env_data))
-    cat("env_data structure before filtering in input_check:\n")
-    str(env_data)
-
-    unique_groups_inside <- env_data %>%
-    dplyr::mutate(group_obs = paste0(!!quo_groupfield, "-", !!quo_obsfield)) %>%
-    dplyr::distinct(group_obs)
-
-    cat("Unique group_obs inside input_check:\n")
-    print(unique_groups_inside)
-
-    unique_dates_inside <- env_data %>%
-    dplyr::distinct(obs_date)
-
-    cat("Unique dates inside input_check:\n")
-    print(unique_dates_inside)
-
-    # Print first few rows of env_data inside input_check
-    cat("First few rows of env_data inside input_check:\n")
-    print(head(env_data))
     pre_env_check <- env_data %>%
       #only pre-report data check
       dplyr::filter(.data$obs_date < report_start_date) %>%
@@ -501,35 +480,8 @@ input_check <- function(epi_data,
       #calc number of rows, should be the same for all if no missing rows
       dplyr::group_by(.data$group_obs) %>%
       dplyr::summarize(rowcount = dplyr::n())
-    
-    cat("pre_env_check summary:\n")
-    print(summary(pre_env_check))
-    cat("pre_env_check structure:\n")
-    str(pre_env_check)
-
-    cat("pre_env_check after filtering and grouping:\n")
-    print(pre_env_check)
-
     not_max_env_rows <- pre_env_check %>%
       dplyr::filter(.data$rowcount < max(pre_env_check$rowcount))
-
-    cat("not_max_env_rows summary:\n")
-    print(summary(not_max_env_rows))
-    cat("not_max_env_rows structure:\n")
-    str(not_max_env_rows)
-
-    not_max_env_rows <- pre_env_check %>%
-      dplyr::filter(.data$rowcount < max(pre_env_check$rowcount))
-
-
-    cat("not_max_env_rows summary:\n")
-    print(summary(not_max_env_rows))
-    cat("not_max_env_rows structure:\n")
-    str(not_max_env_rows)
-
-    cat("Details of group_obs with lower rowcounts:\n")
-    print(not_max_env_rows)
-
     if (nrow(not_max_env_rows) > 1) {
       #some implicit missing rows
       err_flag <- TRUE
@@ -860,5 +812,4 @@ input_check <- function(epi_data,
   create_named_list(err_flag, err_msgs, warn_flag, warn_msgs, clean_settings = new_settings)
 
 } #end input_check()
-
 
