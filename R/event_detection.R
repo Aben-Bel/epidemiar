@@ -169,7 +169,20 @@ run_farrington <- function(epi_fc_data,
 
   # Loop through each group in epi_stss
   for (i in 1:length(epi_stss)) {
+    # Check unique values in 'state' and 'alarm'
+    state_values <- unique(epi_stss[[i]]$state)
+    alarm_values <- unique(epi_stss[[i]]$alarm)
     
+    message("Unique 'state' values in group ", i, ": ", paste(state_values, collapse = ", "))
+    message("Unique 'alarm' values in group ", i, ": ", paste(alarm_values, collapse = ", "))
+    
+    if (length(state_values) == 1) {
+        message("Warning: 'state' has only one unique value in group ", i, ".")
+    }
+    if (length(alarm_values) == 1) {
+        message("Warning: 'alarm' has only one unique value in group ", i, ".")
+    }
+
     # Debugging: Print the current group number
     message("Processing group: ", i)
     
