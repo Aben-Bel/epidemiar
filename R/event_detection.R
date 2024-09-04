@@ -74,14 +74,287 @@ run_event_detection <- function(epi_fc_data,
 
 }
 
+# #' Run the Farrington early detection algorithm
+# #'
+# #'@inheritParams run_event_detection
+# #'
+# #'@return Returns a list of three generated series from the Farrington algorithm:
+# #' "ed" : early detection alerts (ed period of most recent epi data)
+# #' "ew" : early warning alerts (forecast/future portion)
+# #' "thresh" : threshold values per week
+# #'
+# run_farrington <- function(epi_fc_data,
+#                            quo_groupfield,
+#                            quo_popfield,
+#                            ed_control,
+#                            val_type,
+#                            inc_per,
+#                            groupings,
+#                            report_dates){
+#   ## Make sts objects
+#   #check about population offset
+#   # did the user set population offset
+#   if (!is.null(ed_control[["populationOffset"]])){
+#     #is it set to true
+#     if (ed_control[["populationOffset"]] == TRUE){
+#       #if so, did they give the population field
+#       if (!is.null(quo_popfield)){
+#         epi_stss <- make_stss(epi_fc_data,
+#                               quo_groupfield,
+#                               quo_popfield,
+#                               groupings)
+#       } else stop("Population offset is TRUE, but population field not given")
+#       #<<>> add to earlier input checks so fails early rather than later?
+#     } else epi_stss <- make_stss(epi_fc_data,
+#                                  quo_groupfield,
+#                                  quo_popfield = NULL,
+#                                  groupings) #popoffset is FALSE, so no pop to sts
+#   } else epi_stss <- make_stss(epi_fc_data,
+#                                quo_groupfield,
+#                                quo_popfield = NULL,
+#                                groupings) #if null, default is false, so pop = NULL
+
+#   ## Set up new control list for Farrington (using their names)
+#   far_control <- list()
+
+#   #get evaluation period (range of row numbers)
+#   far_control[["range"]] <- seq(nrow(epi_stss[[1]]) - length(report_dates$full$seq) + 1,
+#                                 nrow(epi_stss[[1]]))
+
+#   #test for all other parameters that can be passed onto Farrington flexible method
+#   # if not null, use user parameter, otherwise leave as null to use its defaults (or calc for b)
+#   if (!is.null(ed_control[["b"]])){
+#     far_control[["b"]] <- ed_control[["b"]]
+#   }
+#   if (!is.null(ed_control[["w"]])){
+#     far_control[["w"]] <- ed_control[["w"]]
+#   }
+#   if (!is.null(ed_control[["reweight"]])){
+#     far_control[["reweight"]] <- ed_control[["reweight"]]
+#   }
+#   if (!is.null(ed_control[["weightsThreshold"]])){
+#     far_control[["weightsThreshold"]] <- ed_control[["weightsThreshold"]]
+#   }
+#   if (!is.null(ed_control[["alpha"]])){
+#     far_control[["alpha"]] <- ed_control[["alpha"]]
+#   }
+#   if (!is.null(ed_control[["trend"]])){
+#     far_control[["trend"]] <- ed_control[["trend"]]
+#   }
+#   if (!is.null(ed_control[["pThresholdTrend"]])){
+#     far_control[["pThresholdTrend"]] <- ed_control[["pThresholdTrend"]]
+#   }
+#   if (!is.null(ed_control[["limit54"]])){
+#     far_control[["limit54"]] <- ed_control[["limit54"]]
+#   }
+#   if (!is.null(ed_control[["powertrans"]])){
+#     far_control[["powertrans"]] <- ed_control[["powertrans"]]
+#   }
+#   if (!is.null(ed_control[["fitFun"]])){
+#     far_control[["fitFun"]] <- ed_control[["fitFun"]]
+#   }
+#   if (!is.null(ed_control[["populationOffset"]])){
+#     far_control[["populationOffset"]] <- ed_control[["populationOffset"]]
+#   }
+#   if (!is.null(ed_control[["noPeriods"]])){
+#     far_control[["noPeriods"]] <- ed_control[["noPeriods"]]
+#   }
+#   if (!is.null(ed_control[["pastWeeksNotIncluded"]])){
+#     far_control[["pastWeeksNotIncluded"]] <- ed_control[["pastWeeksNotIncluded"]]
+#   }
+#   if (!is.null(ed_control[["thresholdMethod"]])){
+#     far_control[["thresholdMethod"]] <- ed_control[["thresholdMethod"]]
+#   }
+
+
+#   # Loop through each group in epi_stss
+#   for (i in 1:length(epi_stss)) {
+#     message("Checking slots in group: ", i)
+    
+#     # Correcting access to the slots in the sts object
+#     state_values <- unique(epi_stss[[i]]@state)
+#     alarm_values <- unique(epi_stss[[i]]@alarm)
+    
+#     message("Unique 'state' values in group ", i, ": ", paste(state_values, collapse = ", "))
+#     message("Unique 'alarm' values in group ", i, ": ", paste(alarm_values, collapse = ", "))
+    
+#     if (length(state_values) == 1) {
+#         message("Warning: 'state' has only one unique value in group ", i, ".")
+#     }
+#     if (length(alarm_values) == 1) {
+#         message("Warning: 'alarm' has only one unique value in group ", i, ".")
+#     }
+
+#     # Debugging: Print the current group number
+#     message("Processing group: ", i)
+    
+#     # Check the classes of all variables in the current group's data
+#     variable_classes <- sapply(as.data.frame(epi_stss[[i]]), class)
+#     message("Variable classes for group ", i, ":")
+#     print(variable_classes)
+    
+#     # Identify which variables are factors
+#     factor_vars <- names(variable_classes[variable_classes == "factor"])
+    
+#     if (length(factor_vars) > 0) {
+#       # Debugging: Print the factor variables and their levels
+#       message("Factor variables in group ", i, ":")
+#       for (var in factor_vars) {
+#         message(" - ", var, ": levels = ", paste(levels(epi_stss[[i]][[var]]), collapse = ", "))
+#       }
+#     } else {
+#       message("No factor variables found in group ", i)
+#     }
+
+#     factor_vars <- names(variable_classes[variable_classes == "factor"])
+
+#     for (var in factor_vars) {
+#       levels_count <- length(levels(epi_stss[[i]][[var]]))
+      
+#       if (levels_count < 2) {
+#         # Debugging: Print warning for single-level factors
+#         message("Warning: Factor variable '", var, "' in group ", i, " has less than 2 levels (", levels_count, " levels).")
+
+#         # Convert to character or remove the factor variable
+#         epi_stss[[i]][[var]] <- as.character(epi_stss[[i]][[var]])
+#         message("Converted '", var, "' to character type.")
+#       }
+#     }
+#   }
+
+
+#   #run Farringtons
+#   far_res_list <- vector('list', length(epi_stss))
+
+#   for (i in 1:length(epi_stss)){
+
+#     if (is.null(far_control[["b"]])){
+
+#       ## Adaptive b for each geogroup for each week
+#       # b = number of years to go back in time
+#       # allow user set b, else calculate maximum number of years previous data available
+#       # includes allowance for window value, w # of weeks
+
+#       #week setup
+#       this_week_far_control <- far_control
+#       week_collector <- vector("list", length(far_control[["range"]]))
+
+#       for (wk in seq_along(far_control[["range"]])){
+
+#         #eval 'range' will be just this week
+#         this_week_far_control[["range"]] <- far_control[["range"]][wk]
+
+#         #get date of current week
+#         this_week_dt <- as.data.frame(epi_stss[[i]])[this_week_far_control[["range"]], "epoch"]
+
+#       # calculate maximum number of years previous data available
+#       # allowance for window, and default w=3
+#       if (!is.null(this_week_far_control[["w"]])){
+#         this_adjdt <- this_week_dt - lubridate::weeks(this_week_far_control[["w"]])
+#       } else {
+#         this_adjdt <- this_week_dt - lubridate::weeks(3)
+#       }
+
+#       #calculate number of years difference between earliest available data date
+#       # and adjusted report date "start"
+#       # Using interval(), because this allows time_length() to deal with leap years, etc.
+#       this_geogroup_min_date <- epi_stss[[i]] %>% as.data.frame() %>% dplyr::pull(.data$epoch) %>% min()
+#       #set the minimum integer year value to feed to Farrington control
+#       #(cannot round up, must only request data that exists)
+#       this_week_far_control[["b"]] <- lubridate::interval(this_geogroup_min_date, this_adjdt) %>%
+#         lubridate::time_length(unit = "years") %>%
+#         floor()
+
+#       #with graceful fail catching
+#       week_collector[[wk]] <- tryCatch({
+#         #successful run will have Farrington results
+#         surveillance::farringtonFlexible(epi_stss[[i]], control = this_week_far_control)
+#         },
+#         error = function(e){
+#           #failed run
+#           message(paste0("Farrington model failure on ", groupings[i],
+#                          " week of ", this_week_dt,
+#                          ". Continuing with remaining. ",
+#                          "Error from Farrington: ", e))
+#             #print(i); print(groupings[i]); print(e)
+#           #use pre-farrington sts for the appropriate evaluation weeks (range)
+#           #will have the correct format and matches the rest of the results
+#           #but will not have thresholds or alert values
+#           epi_stss[[i]][this_week_far_control$range,]
+#           })
+
+#     } #end week loop
+
+#       #have sts per week of i geogroup, need to make 1 sts
+#       this_geogroup_df <- week_collector %>%
+#         #turn into dataframes to be able to combine
+#         lapply(as.data.frame) %>%
+#         #bind all together into one df
+#         dplyr::bind_rows()
+
+#       #turn combined df into one sts
+#       far_res_list[[i]] <- surveillance::sts(observed = dplyr::select(this_geogroup_df,
+#                                                                       .data$observed) %>%
+#                                                    as.matrix(),
+#                                                  start = epi_stss[[i]]@start,
+#                                                  frequency = epi_stss[[i]]@freq,
+#                                                  epochAsDate = TRUE,
+#                                                  epoch = as.numeric(this_geogroup_df$epoch),
+#                                                  population = dplyr::select(this_geogroup_df,
+#                                                                             .data$population) %>%
+#                                                    as.matrix(),
+#                                                  state = this_geogroup_df[["state"]],
+#                                                  alarm = this_geogroup_df[["alarm"]],
+#                                                  upperbound = this_geogroup_df[["upperbound"]])
+
+#       #end adaptive b calculations
+
+#     } else {
+
+#       #If b is not null, then use user set value
+
+#       #with graceful fail catching
+#       far_res_list[[i]] <- tryCatch({
+#         #successful run will have Farrington results
+#         surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)},
+#         error = function(e){
+#           #failed run
+#           #use pre-farrington sts for the appropriate evaluation weeks (range)
+#           #will have the correct format and matches the rest of the results
+#           #but will not have thresholds or alert values
+#           message(paste0("Farrington model failure on ", groupings[i],
+#                          "and will not have thresholds values or alerts for this group.",
+#                          "Continuing with remaining groups.",
+#                          "Error from Farrington:", e))
+#           #print(i); print(groupings[i]); print(e)
+#           epi_stss[[i]][far_control$range,]})
+
+#     } #end else of b is null
+
+#   } #end geogroups loop
+
+#   #results into output report data form
+#   far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
+#                                      epi_fc_data,
+#                                      quo_groupfield,
+#                                      quo_popfield,
+#                                      val_type,
+#                                      inc_per,
+#                                      groupings,
+#                                      report_dates)
+
+#   far_res
+
+# } #end run farrington
+
 #' Run the Farrington early detection algorithm
 #'
-#'@inheritParams run_event_detection
+#' @inheritParams run_event_detection
 #'
-#'@return Returns a list of three generated series from the Farrington algorithm:
-#' "ed" : early detection alerts (ed period of most recent epi data)
-#' "ew" : early warning alerts (forecast/future portion)
-#' "thresh" : threshold values per week
+#' @return Returns a list of three generated series from the Farrington algorithm:
+#'  "ed" : early detection alerts (ed period of most recent epi data)
+#'  "ew" : early warning alerts (forecast/future portion)
+#'  "thresh" : threshold values per week
 #'
 run_farrington <- function(epi_fc_data,
                            quo_groupfield,
@@ -90,262 +363,132 @@ run_farrington <- function(epi_fc_data,
                            val_type,
                            inc_per,
                            groupings,
-                           report_dates){
+                           report_dates) {
+  
+  # Helper functions
+  check_data_variability <- function(data, min_unique = 2) {
+    n_unique <- length(unique(data$observed))
+    return(n_unique >= min_unique)
+  }
+  
+  add_noise <- function(data, noise_level = 0.1) {
+    data$observed <- data$observed + runif(nrow(data), 0, noise_level)
+    return(data)
+  }
+  
   ## Make sts objects
-  #check about population offset
-  # did the user set population offset
-  if (!is.null(ed_control[["populationOffset"]])){
-    #is it set to true
-    if (ed_control[["populationOffset"]] == TRUE){
-      #if so, did they give the population field
-      if (!is.null(quo_popfield)){
-        epi_stss <- make_stss(epi_fc_data,
-                              quo_groupfield,
-                              quo_popfield,
-                              groupings)
-      } else stop("Population offset is TRUE, but population field not given")
-      #<<>> add to earlier input checks so fails early rather than later?
-    } else epi_stss <- make_stss(epi_fc_data,
-                                 quo_groupfield,
-                                 quo_popfield = NULL,
-                                 groupings) #popoffset is FALSE, so no pop to sts
-  } else epi_stss <- make_stss(epi_fc_data,
-                               quo_groupfield,
-                               quo_popfield = NULL,
-                               groupings) #if null, default is false, so pop = NULL
-
+  if (!is.null(ed_control[["populationOffset"]]) && ed_control[["populationOffset"]] == TRUE) {
+    if (!is.null(quo_popfield)) {
+      epi_stss <- make_stss(epi_fc_data, quo_groupfield, quo_popfield, groupings)
+    } else {
+      stop("Population offset is TRUE, but population field not given")
+    }
+  } else {
+    epi_stss <- make_stss(epi_fc_data, quo_groupfield, quo_popfield = NULL, groupings)
+  }
+  
   ## Set up new control list for Farrington (using their names)
-  far_control <- list()
-
-  #get evaluation period (range of row numbers)
-  far_control[["range"]] <- seq(nrow(epi_stss[[1]]) - length(report_dates$full$seq) + 1,
-                                nrow(epi_stss[[1]]))
-
-  #test for all other parameters that can be passed onto Farrington flexible method
-  # if not null, use user parameter, otherwise leave as null to use its defaults (or calc for b)
-  if (!is.null(ed_control[["b"]])){
-    far_control[["b"]] <- ed_control[["b"]]
-  }
-  if (!is.null(ed_control[["w"]])){
-    far_control[["w"]] <- ed_control[["w"]]
-  }
-  if (!is.null(ed_control[["reweight"]])){
-    far_control[["reweight"]] <- ed_control[["reweight"]]
-  }
-  if (!is.null(ed_control[["weightsThreshold"]])){
-    far_control[["weightsThreshold"]] <- ed_control[["weightsThreshold"]]
-  }
-  if (!is.null(ed_control[["alpha"]])){
-    far_control[["alpha"]] <- ed_control[["alpha"]]
-  }
-  if (!is.null(ed_control[["trend"]])){
-    far_control[["trend"]] <- ed_control[["trend"]]
-  }
-  if (!is.null(ed_control[["pThresholdTrend"]])){
-    far_control[["pThresholdTrend"]] <- ed_control[["pThresholdTrend"]]
-  }
-  if (!is.null(ed_control[["limit54"]])){
-    far_control[["limit54"]] <- ed_control[["limit54"]]
-  }
-  if (!is.null(ed_control[["powertrans"]])){
-    far_control[["powertrans"]] <- ed_control[["powertrans"]]
-  }
-  if (!is.null(ed_control[["fitFun"]])){
-    far_control[["fitFun"]] <- ed_control[["fitFun"]]
-  }
-  if (!is.null(ed_control[["populationOffset"]])){
-    far_control[["populationOffset"]] <- ed_control[["populationOffset"]]
-  }
-  if (!is.null(ed_control[["noPeriods"]])){
-    far_control[["noPeriods"]] <- ed_control[["noPeriods"]]
-  }
-  if (!is.null(ed_control[["pastWeeksNotIncluded"]])){
-    far_control[["pastWeeksNotIncluded"]] <- ed_control[["pastWeeksNotIncluded"]]
-  }
-  if (!is.null(ed_control[["thresholdMethod"]])){
-    far_control[["thresholdMethod"]] <- ed_control[["thresholdMethod"]]
-  }
-
-
-  # Loop through each group in epi_stss
+  far_control <- list(
+    range = seq(nrow(epi_stss[[1]]) - length(report_dates$full$seq) + 1, nrow(epi_stss[[1]])),
+    w = ed_control[["w"]],
+    reweight = ed_control[["reweight"]],
+    weightsThreshold = ed_control[["weightsThreshold"]],
+    trend = ed_control[["trend"]],
+    pThresholdTrend = ed_control[["pThresholdTrend"]],
+    populationOffset = ed_control[["populationOffset"]],
+    noPeriods = ed_control[["noPeriods"]],
+    pastWeeksNotIncluded = ed_control[["pastWeeksNotIncluded"]],
+    limit54 = ed_control[["limit54"]],
+    thresholdMethod = ed_control[["thresholdMethod"]]
+  )
+  
+  # Remove NULL elements
+  far_control <- far_control[!sapply(far_control, is.null)]
+  
+  # Run Farringtons
+  far_res_list <- vector('list', length(epi_stss))
+  
   for (i in 1:length(epi_stss)) {
-    message("Checking slots in group: ", i)
-    
-    # Correcting access to the slots in the sts object
-    state_values <- unique(epi_stss[[i]]@state)
-    alarm_values <- unique(epi_stss[[i]]@alarm)
-    
-    message("Unique 'state' values in group ", i, ": ", paste(state_values, collapse = ", "))
-    message("Unique 'alarm' values in group ", i, ": ", paste(alarm_values, collapse = ", "))
-    
-    if (length(state_values) == 1) {
-        message("Warning: 'state' has only one unique value in group ", i, ".")
-    }
-    if (length(alarm_values) == 1) {
-        message("Warning: 'alarm' has only one unique value in group ", i, ".")
-    }
-
-    # Debugging: Print the current group number
     message("Processing group: ", i)
     
-    # Check the classes of all variables in the current group's data
-    variable_classes <- sapply(as.data.frame(epi_stss[[i]]), class)
-    message("Variable classes for group ", i, ":")
-    print(variable_classes)
-    
-    # Identify which variables are factors
-    factor_vars <- names(variable_classes[variable_classes == "factor"])
-    
-    if (length(factor_vars) > 0) {
-      # Debugging: Print the factor variables and their levels
-      message("Factor variables in group ", i, ":")
-      for (var in factor_vars) {
-        message(" - ", var, ": levels = ", paste(levels(epi_stss[[i]][[var]]), collapse = ", "))
-      }
-    } else {
-      message("No factor variables found in group ", i)
-    }
-
-    factor_vars <- names(variable_classes[variable_classes == "factor"])
-
-    for (var in factor_vars) {
-      levels_count <- length(levels(epi_stss[[i]][[var]]))
-      
-      if (levels_count < 2) {
-        # Debugging: Print warning for single-level factors
-        message("Warning: Factor variable '", var, "' in group ", i, " has less than 2 levels (", levels_count, " levels).")
-
-        # Convert to character or remove the factor variable
-        epi_stss[[i]][[var]] <- as.character(epi_stss[[i]][[var]])
-        message("Converted '", var, "' to character type.")
-      }
-    }
-  }
-
-
-  #run Farringtons
-  far_res_list <- vector('list', length(epi_stss))
-
-  for (i in 1:length(epi_stss)){
-
-    if (is.null(far_control[["b"]])){
-
-      ## Adaptive b for each geogroup for each week
-      # b = number of years to go back in time
-      # allow user set b, else calculate maximum number of years previous data available
-      # includes allowance for window value, w # of weeks
-
-      #week setup
+    if (is.null(ed_control[["b"]])) {
+      # Adaptive b for each geogroup for each week
       this_week_far_control <- far_control
       week_collector <- vector("list", length(far_control[["range"]]))
-
-      for (wk in seq_along(far_control[["range"]])){
-
-        #eval 'range' will be just this week
+      
+      for (wk in seq_along(far_control[["range"]])) {
         this_week_far_control[["range"]] <- far_control[["range"]][wk]
-
-        #get date of current week
         this_week_dt <- as.data.frame(epi_stss[[i]])[this_week_far_control[["range"]], "epoch"]
-
-      # calculate maximum number of years previous data available
-      # allowance for window, and default w=3
-      if (!is.null(this_week_far_control[["w"]])){
-        this_adjdt <- this_week_dt - lubridate::weeks(this_week_far_control[["w"]])
-      } else {
-        this_adjdt <- this_week_dt - lubridate::weeks(3)
-      }
-
-      #calculate number of years difference between earliest available data date
-      # and adjusted report date "start"
-      # Using interval(), because this allows time_length() to deal with leap years, etc.
-      this_geogroup_min_date <- epi_stss[[i]] %>% as.data.frame() %>% dplyr::pull(.data$epoch) %>% min()
-      #set the minimum integer year value to feed to Farrington control
-      #(cannot round up, must only request data that exists)
-      this_week_far_control[["b"]] <- lubridate::interval(this_geogroup_min_date, this_adjdt) %>%
-        lubridate::time_length(unit = "years") %>%
-        floor()
-
-      #with graceful fail catching
-      week_collector[[wk]] <- tryCatch({
-        #successful run will have Farrington results
-        surveillance::farringtonFlexible(epi_stss[[i]], control = this_week_far_control)
+        
+        this_adjdt <- this_week_dt - lubridate::weeks(this_week_far_control[["w"]] %||% 3)
+        
+        this_geogroup_min_date <- min(as.data.frame(epi_stss[[i]])$epoch)
+        this_week_far_control[["b"]] <- floor(lubridate::time_length(lubridate::interval(this_geogroup_min_date, this_adjdt), "years"))
+        
+        # Check data variability and add noise if necessary
+        this_week_data <- as.data.frame(epi_stss[[i]])[1:this_week_far_control[["range"]], ]
+        if (!check_data_variability(this_week_data)) {
+          this_week_data <- add_noise(this_week_data)
+          epi_stss[[i]]@observed[1:this_week_far_control[["range"]]] <- this_week_data$observed
+        }
+        
+        week_collector[[wk]] <- tryCatch({
+          surveillance::farringtonFlexible(epi_stss[[i]], control = this_week_far_control)
         },
-        error = function(e){
-          #failed run
+        error = function(e) {
           message(paste0("Farrington model failure on ", groupings[i],
                          " week of ", this_week_dt,
-                         ". Continuing with remaining. ",
-                         "Error from Farrington: ", e))
-            #print(i); print(groupings[i]); print(e)
-          #use pre-farrington sts for the appropriate evaluation weeks (range)
-          #will have the correct format and matches the rest of the results
-          #but will not have thresholds or alert values
-          epi_stss[[i]][this_week_far_control$range,]
+                         ". Attempting with modified parameters. ",
+                         "Original error: ", e))
+          
+          # Try with modified parameters
+          modified_control <- this_week_far_control
+          modified_control[["weightsThreshold"]] <- 2.58  # Less strict
+          modified_control[["pThresholdTrend"]] <- 1   # Less strict
+          
+          tryCatch({
+            surveillance::farringtonFlexible(epi_stss[[i]], control = modified_control)
+          },
+          error = function(e2) {
+            message(paste0("Second attempt failed. Continuing with remaining. Error: ", e2))
+            epi_stss[[i]][this_week_far_control$range,]
           })
-
-    } #end week loop
-
-      #have sts per week of i geogroup, need to make 1 sts
-      this_geogroup_df <- week_collector %>%
-        #turn into dataframes to be able to combine
-        lapply(as.data.frame) %>%
-        #bind all together into one df
-        dplyr::bind_rows()
-
-      #turn combined df into one sts
-      far_res_list[[i]] <- surveillance::sts(observed = dplyr::select(this_geogroup_df,
-                                                                      .data$observed) %>%
-                                                   as.matrix(),
-                                                 start = epi_stss[[i]]@start,
-                                                 frequency = epi_stss[[i]]@freq,
-                                                 epochAsDate = TRUE,
-                                                 epoch = as.numeric(this_geogroup_df$epoch),
-                                                 population = dplyr::select(this_geogroup_df,
-                                                                            .data$population) %>%
-                                                   as.matrix(),
-                                                 state = this_geogroup_df[["state"]],
-                                                 alarm = this_geogroup_df[["alarm"]],
-                                                 upperbound = this_geogroup_df[["upperbound"]])
-
-      #end adaptive b calculations
-
+        })
+      }
+      
+      # Combine weekly results
+      this_geogroup_df <- dplyr::bind_rows(lapply(week_collector, as.data.frame))
+      
+      far_res_list[[i]] <- surveillance::sts(
+        observed = as.matrix(dplyr::select(this_geogroup_df, .data$observed)),
+        start = epi_stss[[i]]@start,
+        frequency = epi_stss[[i]]@freq,
+        epochAsDate = TRUE,
+        epoch = as.numeric(this_geogroup_df$epoch),
+        population = as.matrix(dplyr::select(this_geogroup_df, .data$population)),
+        state = this_geogroup_df[["state"]],
+        alarm = this_geogroup_df[["alarm"]],
+        upperbound = this_geogroup_df[["upperbound"]]
+      )
+      
     } else {
-
-      #If b is not null, then use user set value
-
-      #with graceful fail catching
+      # Use user-set b value
       far_res_list[[i]] <- tryCatch({
-        #successful run will have Farrington results
-        surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)},
-        error = function(e){
-          #failed run
-          #use pre-farrington sts for the appropriate evaluation weeks (range)
-          #will have the correct format and matches the rest of the results
-          #but will not have thresholds or alert values
-          message(paste0("Farrington model failure on ", groupings[i],
-                         "and will not have thresholds values or alerts for this group.",
-                         "Continuing with remaining groups.",
-                         "Error from Farrington:", e))
-          #print(i); print(groupings[i]); print(e)
-          epi_stss[[i]][far_control$range,]})
+        surveillance::farringtonFlexible(epi_stss[[i]], control = far_control)
+      },
+      error = function(e) {
+        message(paste0("Farrington model failure on ", groupings[i],
+                       " and will not have threshold values or alerts for this group. ",
+                       "Continuing with remaining groups. ",
+                       "Error from Farrington: ", e))
+        epi_stss[[i]][far_control$range,]
+      })
+    }
+  }
+  
+  return(far_res_list)
+}
 
-    } #end else of b is null
-
-  } #end geogroups loop
-
-  #results into output report data form
-  far_res <- stss_res_to_output_data(stss_res_list = far_res_list,
-                                     epi_fc_data,
-                                     quo_groupfield,
-                                     quo_popfield,
-                                     val_type,
-                                     inc_per,
-                                     groupings,
-                                     report_dates)
-
-  far_res
-
-} #end run farrington
 
 #' Make the list of sts objects
 #'
