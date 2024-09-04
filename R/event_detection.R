@@ -169,9 +169,11 @@ run_farrington <- function(epi_fc_data,
 
   # Loop through each group in epi_stss
   for (i in 1:length(epi_stss)) {
-    # Check unique values in 'state' and 'alarm'
-    state_values <- unique(epi_stss[[i]]$state)
-    alarm_values <- unique(epi_stss[[i]]$alarm)
+    message("Checking slots in group: ", i)
+    
+    # Correcting access to the slots in the sts object
+    state_values <- unique(epi_stss[[i]]@state)
+    alarm_values <- unique(epi_stss[[i]]@alarm)
     
     message("Unique 'state' values in group ", i, ": ", paste(state_values, collapse = ", "))
     message("Unique 'alarm' values in group ", i, ": ", paste(alarm_values, collapse = ", "))
